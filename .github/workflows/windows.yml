@@ -55,4 +55,5 @@ jobs:
         run: |
           $msi = Get-ChildItem build/compose/binaries/main/msi/*.msi | Select-Object -First 1
           Copy-Item $msi.FullName "$env:RUNNER_TEMP\Papote-windows.msi"
-          gh release create "${{ github.ref_name }}" "$env:RUNNER_TEMP\Papote-windows.msi" --title "Papote ${{ github.ref_name }} pour Windows" --notes-file ../.github/release-notes-windows.md --latest=false
+          $version = "${{ github.ref_name }}".Replace("windows-v", "")
+          gh release create "${{ github.ref_name }}" "$env:RUNNER_TEMP\Papote-windows.msi" --title "Papote $version pour Windows" --notes-file ../.github/release-notes-windows.md --latest=false
