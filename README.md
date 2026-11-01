@@ -1,10 +1,11 @@
 # Papote
 
-App d'interview pour **iPhone, Mac et Android**.
+App d'interview pour **iPhone, Mac, Windows et Android**.
 
 - [Installer sur Android](#android) : un fichier à télécharger, sans ordinateur.
 - [Installer sur iPhone](#iphone) : avec un Mac et Xcode.
 - [Installer sur Mac](#mac) : avec Xcode, même projet que l'iPhone.
+- [Installer sur Windows](#windows) : un installeur à télécharger.
 
 Papote enregistre une interview avec le timecode horaire local et la
 transcrit en direct. Tu indiques qui parle d'une touche : un intervieweur et
@@ -38,7 +39,33 @@ Drive, Gmail, WeTransfer… Tu peux aussi choisir un dossier de sauvegarde
 automatique dans les réglages.
 
 Le code Android est dans le dossier `android/` : Kotlin et Jetpack Compose,
-compilable avec Android Studio.
+compilable avec Android Studio. Il partage le dossier `core/` avec la version
+Windows (timecode, WAV BWF, exports, rangement des interviews).
+
+## Windows
+
+1. Ouvre la page [Releases](https://github.com/mdeclais/papote/releases) et
+   télécharge **Papote-windows.msi** (version « pour Windows »).
+2. Ouvre le fichier. Windows affiche « Windows a protégé votre ordinateur »
+   parce que l'installeur n'est pas signé : clique sur **Informations
+   complémentaires**, puis **Exécuter quand même**.
+3. Lance Papote depuis le menu Démarrer. Clique sur la pastille de langue
+   puis sur **Français** pour télécharger la transcription (41 Mo, une fois).
+
+Windows 10 ou 11, 64 bits. Comme sur Android, la transcription utilise Vosk,
+sans Internet et sans ponctuation.
+
+- Les interviews sont rangées dans **Documents\Papote**, un dossier par projet.
+- Pendant l'enregistrement, les touches **1** à **6** désignent la personne
+  qui parle, **I** et **O** posent le début et la fin d'un extrait.
+- Le PC ne se met pas en veille pendant un enregistrement.
+- Dans les réglages, choisis un dossier de sauvegarde dans OneDrive, Google
+  Drive (avec l'app pour ordinateur) ou sur un disque externe.
+- Si aucun son n'arrive : Paramètres > Confidentialité et sécurité >
+  Microphone, autorise les applications de bureau.
+
+Le code est dans `windows/` (Kotlin et Compose Desktop). L'installeur est
+fabriqué par GitHub sur une machine Windows (`.github/workflows/windows.yml`).
 
 ## iPhone
 

@@ -1,0 +1,58 @@
+# Compile, teste et emballe Papote pour Windows (.msi) sur une machine Windows.
+# Une étiquette windows-v* publie l'installeur dans une version GitHub.
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    # Les étiquettes déclenchent toujours ; sur main, seulement si le code Windows change.
+    tags: ["windows-v*"]
+    paths: ["core/**", "windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  msi:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Voix de test (synthèse Windows, anglais)
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Speech
+          $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+          $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen, [System.Speech.AudioFormat.AudioChannel]::Mono)
+          $s.SetOutputToWaveFile("$env:RUNNER_TEMP\speech.wav", $fmt)
+          $s.Speak("Hello everyone. Today we are recording an interview for a documentary about a small farm. Thank you for coming.")
+          $s.Dispose()
+
+      - name: Tests (dont la transcription Vosk avec la DLL Windows)
+        run: ./gradlew.bat test "-Dpapote.speech=${{ runner.temp }}\speech.wav" -Dpapote.speechLang=en-US
+
+      - name: Installeur
+        run: ./gradlew.bat packageMsi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Papote-windows
+          path: windows/build/compose/binaries/main/msi/*.msi
+
+      - name: Publication
+        if: startsWith(github.ref, 'refs/tags/windows-v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $msi = Get-ChildItem build/compose/binaries/main/msi/*.msi | Select-Object -First 1
+          Copy-Item $msi.FullName "$env:RUNNER_TEMP\Papote-windows.msi"
+          gh release create "${{ github.ref_name }}" "$env:RUNNER_TEMP\Papote-windows.msi" --title "Papote ${{ github.ref_name }} pour Windows" --notes-file ../.github/release-notes-windows.md --latest=false

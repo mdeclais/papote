@@ -63,6 +63,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("io.github.mdeclais.papote:core")
     implementation("com.alphacephei:vosk-android:0.3.75")
     implementation("net.java.dev.jna:jna:5.18.1@aar")
 
