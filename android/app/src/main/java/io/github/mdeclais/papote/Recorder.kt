@@ -59,7 +59,22 @@ object Recorder {
     /** "" = sans projet. */
     var project by mutableStateOf("")
     var speakersEnabled by mutableStateOf(true)
+    /** Index 0 : l'intervieweur ; ensuite 1 à [MAX_GUESTS] invités. */
     var speakerNames by mutableStateOf(listOf("Intervieweur", "Invité"))
+    const val MAX_GUESTS = 5
+    val guestCount get() = speakerNames.size - 1
+
+    fun setGuestCount(count: Int) {
+        val n = count.coerceIn(1, MAX_GUESTS)
+        val names = speakerNames.take(n + 1).toMutableList()
+        while (names.size - 1 < n) names += "Invité ${names.size}"
+        // Un seul invité : « Invité » tout court, comme avant.
+        if (n > 1 && names[1] == "Invité") names[1] = "Invité 1"
+        if (n == 1 && names[1] == "Invité 1") names[1] = "Invité"
+        speakerNames = names
+        if (currentSpeaker > n) currentSpeaker = 0
+        savePrefs()
+    }
     /** 0 = micro par défaut. */
     var inputId by mutableStateOf(0)
     var stereo by mutableStateOf(false)
@@ -88,7 +103,8 @@ object Recorder {
         fps = prefs.getInt("fps", 25)
         project = prefs.getString("project", "")!!
         speakersEnabled = prefs.getBoolean("speakersEnabled", true)
-        speakerNames = prefs.getString("speakerNames", null)?.split("\n") ?: speakerNames
+        speakerNames = prefs.getString("speakerNames", null)?.split("\n")
+            ?.takeIf { it.size >= 2 }?.take(MAX_GUESTS + 1) ?: speakerNames
         inputId = prefs.getInt("inputId", 0)
         stereo = prefs.getBoolean("stereo", false)
         bitDepth = prefs.getInt("bitDepth", 16)

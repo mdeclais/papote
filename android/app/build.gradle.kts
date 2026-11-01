@@ -19,8 +19,8 @@ android {
         applicationId = "io.github.mdeclais.papote"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         // Téléphones ARM (quasi tous) et x86_64 (Chromebooks, émulateurs).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }

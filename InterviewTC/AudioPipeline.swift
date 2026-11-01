@@ -19,6 +19,8 @@ final class AudioPipeline: @unchecked Sendable {
     private var channels = 1
     private var sampleRate = 48_000.0
     private var writer: BWFWriter?
+    /// Délai entre le son qui entre dans le micro et le buffer reçu.
+    private var inputLatency: TimeInterval = 0
 
     var onStart: (@Sendable (StartInfo) -> Void)?
     var onLevel: (@Sendable (Float) -> Void)?
@@ -41,6 +43,11 @@ final class AudioPipeline: @unchecked Sendable {
         guard format.sampleRate > 0, format.channelCount > 0 else { throw RecorderError.noInput }
         channels = min(wantedChannels, Int(format.channelCount))
         sampleRate = format.sampleRate
+        #if os(iOS)
+        inputLatency = AVAudioSession.sharedInstance().inputLatency
+        #else
+        inputLatency = input.presentationLatency
+        #endif
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, when in
             self?.process(buffer, at: when)
         }
@@ -64,7 +71,8 @@ final class AudioPipeline: @unchecked Sendable {
         let frames = Int(buffer.frameLength)
 
         if writer == nil {
-            let info = Self.startInfo(for: when, sampleRate: buffer.format.sampleRate, channels: channels)
+            let info = Self.startInfo(for: when, sampleRate: buffer.format.sampleRate, channels: channels,
+                                      latency: inputLatency)
             do {
                 let w = try BWFWriter(url: audioURL, sampleRate: info.sampleRate,
                                       channels: channels, bitDepth: bitDepth, timeReference: info.timeReference,
@@ -91,9 +99,10 @@ final class AudioPipeline: @unchecked Sendable {
 
     /// Heure murale du premier échantillon du buffer : on remonte depuis
     /// « maintenant » de l'âge du buffer (hostTime) et de la latence d'entrée.
-    private static func startInfo(for when: AVAudioTime, sampleRate: Double, channels: Int) -> StartInfo {
+    private static func startInfo(for when: AVAudioTime, sampleRate: Double, channels: Int,
+                                  latency: TimeInterval) -> StartInfo {
         let now = Date()
-        var age = AVAudioSession.sharedInstance().inputLatency
+        var age = latency
         if when.isHostTimeValid {
             age += AVAudioTime.seconds(forHostTime: mach_absolute_time())
                 - AVAudioTime.seconds(forHostTime: when.hostTime)
@@ -109,9 +118,13 @@ enum RecorderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        #if os(macOS)
+        case .micDenied: "Accès au micro refusé. Autorise-le dans Réglages Système > Confidentialité et sécurité > Micro."
+        #else
         case .micDenied: "Accès au micro refusé. Autorise-le dans Réglages > Papote."
+        #endif
         case .noInput: "Aucune entrée audio disponible."
-        case .localeUnsupported: "Cette langue n'est pas prise en charge par la transcription sur cet iPhone."
+        case .localeUnsupported: "Cette langue n'est pas prise en charge par la transcription sur cet appareil."
         case .transcriptionUnavailable: "La transcription n'est pas disponible sur cet appareil."
         }
     }

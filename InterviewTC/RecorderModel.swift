@@ -1,10 +1,9 @@
 import AVFoundation
 import Observation
 import Speech
-import UIKit
 
 struct AudioInput: Identifiable, Hashable {
-    let id: String      // uid de AVAudioSessionPortDescription
+    let id: String      // uid du port (iPhone) ou du périphérique Core Audio (Mac)
     let name: String
     let isBuiltIn: Bool
 }
@@ -34,8 +33,25 @@ final class RecorderModel {
     /// "" = sans projet.
     var project: String { didSet { defaults.set(project, forKey: "project") } }
     var speakersEnabled: Bool { didSet { defaults.set(speakersEnabled, forKey: "speakersEnabled") } }
+    /// Index 0 : l'intervieweur ; ensuite 1 à `maxGuests` invités.
     var speakerNames: [String] { didSet { defaults.set(speakerNames, forKey: "speakerNames") } }
-    /// "" = entrée par défaut d'iOS.
+    static let maxGuests = 5
+
+    var guestCount: Int {
+        get { speakerNames.count - 1 }
+        set {
+            let n = min(max(newValue, 1), Self.maxGuests)
+            var names = speakerNames
+            if names.count - 1 > n { names.removeLast(names.count - 1 - n) }
+            while names.count - 1 < n { names.append("Invité \(names.count)") }
+            // Un seul invité : « Invité » tout court, comme avant.
+            if n > 1, names[1] == "Invité" { names[1] = "Invité 1" }
+            if n == 1, names[1] == "Invité 1" { names[1] = "Invité" }
+            speakerNames = names
+            if currentSpeaker > n { currentSpeaker = 0 }
+        }
+    }
+    /// "" = entrée par défaut du système.
     var inputUID: String { didSet { defaults.set(inputUID, forKey: "inputUID") } }
     var stereo: Bool { didSet { defaults.set(stereo, forKey: "stereo") } }
     /// 16 bits par défaut : un tiers plus léger que 24 bits, largement assez pour la voix.
@@ -59,18 +75,27 @@ final class RecorderModel {
         fps = FrameRate(rawValue: defaults.integer(forKey: "fps")) ?? .fps25
         project = defaults.string(forKey: "project") ?? ""
         speakersEnabled = defaults.object(forKey: "speakersEnabled") as? Bool ?? true
-        speakerNames = defaults.stringArray(forKey: "speakerNames") ?? ["Intervieweur", "Invité"]
+        let names = defaults.stringArray(forKey: "speakerNames") ?? []
+        speakerNames = names.count >= 2 ? Array(names.prefix(Self.maxGuests + 1)) : ["Intervieweur", "Invité"]
         inputUID = defaults.string(forKey: "inputUID") ?? ""
         stereo = defaults.bool(forKey: "stereo")
         bitDepth = defaults.object(forKey: "bitDepth") as? Int ?? 16
         speakerNamesInSRT = defaults.object(forKey: SessionStore.speakerNamesInSRTKey) as? Bool ?? true
 
+        #if os(iOS)
         routeObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
                 if self?.phase == .idle { self?.refreshInputs() }
             }
         }
+        #else
+        MacAudio.onDevicesChanged { [weak self] in
+            Task { @MainActor in
+                if self?.phase == .idle { self?.refreshInputs() }
+            }
+        }
+        #endif
     }
 
     var currentInputName: String {
@@ -109,15 +134,20 @@ final class RecorderModel {
     // MARK: Micro
 
     func refreshInputs() {
+        #if os(macOS)
+        inputs = MacAudio.inputs()
+        #else
         let av = AVAudioSession.sharedInstance()
         try? av.setCategory(.record, mode: .default, options: [.allowBluetoothHFP])
         inputs = (av.availableInputs ?? []).map {
             AudioInput(id: $0.uid, name: $0.portName, isBuiltIn: $0.portType == .builtInMic)
         }
+        #endif
         if !inputUID.isEmpty, !inputs.contains(where: { $0.id == inputUID }) { inputUID = "" }
     }
 
     private func configureSession() throws {
+        #if os(iOS)
         let av = AVAudioSession.sharedInstance()
         try av.setCategory(.record, mode: .default, options: [.allowBluetoothHFP])
         try? av.setPreferredSampleRate(48_000)
@@ -137,6 +167,13 @@ final class RecorderModel {
             try? av.setPreferredInputOrientation(.portrait)
             if av.maximumInputNumberOfChannels >= 2 { try? av.setPreferredInputNumberOfChannels(2) }
         }
+        #endif
+    }
+
+    private func deactivateSession() {
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
     }
 
     // MARK: Enregistrement
@@ -215,11 +252,14 @@ final class RecorderModel {
                     await self?.stop()
                 }
             }
+            #if os(macOS)
+            try MacAudio.select(inputUID, on: pipeline.engine)
+            #endif
             try pipeline.start()
             self.pipeline = pipeline
             recordingSince = .now
             observe(pipeline.engine)
-            UIApplication.shared.isIdleTimerDisabled = true
+            Platform.keepAwake(true)
             phase = .recording
             autosaveTask = Task { [weak self] in
                 while !Task.isCancelled {
@@ -232,7 +272,7 @@ final class RecorderModel {
             status = nil
             transcriber = nil
             phase = .idle
-            try? AVAudioSession.sharedInstance().setActive(false)
+            deactivateSession()
         }
     }
 
@@ -263,8 +303,8 @@ final class RecorderModel {
         transcriber = nil
         level = 0
         status = nil
-        UIApplication.shared.isIdleTimerDisabled = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        Platform.keepAwake(false)
+        deactivateSession()
         phase = .idle
     }
 
@@ -330,14 +370,14 @@ final class RecorderModel {
     func markIn() {
         guard phase == .recording, session != nil else { return }
         openIn = now
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        Platform.feedback(.light)
     }
 
     /// OUT : ferme l'extrait ouvert et l'enregistre comme marqueur avec durée.
     func markOut() {
         guard let start = openIn else { return }
         closeExtract(start: start, end: now)
-        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        Platform.feedback(.strong)
     }
 
     private func closeExtract(start: Double, end: Double) {
@@ -356,7 +396,7 @@ final class RecorderModel {
         guard index != currentSpeaker else { return }
         currentSpeaker = index
         if phase == .recording { speakerChanges.append((now, index)) }
-        UISelectionFeedbackGenerator().selectionChanged()
+        Platform.feedback(.selection)
     }
 
     private func speaker(at time: Double) -> Int? {
@@ -382,6 +422,7 @@ final class RecorderModel {
     /// que de perdre l'enregistrement ou de décaler le timecode.
     private func observe(_ engine: AVAudioEngine) {
         let nc = NotificationCenter.default
+        #if os(iOS)
         observers.append(nc.addObserver(forName: AVAudioSession.interruptionNotification,
                                         object: nil, queue: .main) { [weak self] note in
             guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -391,6 +432,7 @@ final class RecorderModel {
                 await self?.stop()
             }
         })
+        #endif
         observers.append(nc.addObserver(forName: .AVAudioEngineConfigurationChange,
                                         object: engine, queue: .main) { [weak self] _ in
             Task { @MainActor in

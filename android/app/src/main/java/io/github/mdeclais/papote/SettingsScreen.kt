@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,9 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -28,7 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -97,16 +102,23 @@ fun SettingsScreen(onBack: () -> Unit) {
             Card {
                 Toggle("Distinguer les locuteurs", r.speakersEnabled) { r.speakersEnabled = it; save() }
                 if (r.speakersEnabled) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Invités : ${r.guestCount}", color = Palette.ink, modifier = Modifier.weight(1f))
+                        StepButton(Icons.Outlined.Remove, "Un invité de moins", r.guestCount > 1) { r.setGuestCount(r.guestCount - 1) }
+                        Spacer(Modifier.width(8.dp))
+                        StepButton(Icons.Outlined.Add, "Un invité de plus", r.guestCount < Recorder.MAX_GUESTS) { r.setGuestCount(r.guestCount + 1) }
+                    }
                     Column(Modifier.padding(horizontal = 16.dp)) {
                         r.speakerNames.forEachIndexed { i, n ->
                             OutlinedTextField(n, { v -> r.speakerNames = r.speakerNames.toMutableList().also { it[i] = v }; save() },
-                                              label = { Text("Locuteur ${i + 1}") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                                              label = { Text(if (i == 0) "Intervieweur" else "Invité $i") }, singleLine = true,
+                                              modifier = Modifier.fillMaxWidth())
                         }
                     }
                     Toggle("Noms dans les sous-titres SRT", r.speakerNamesInSRT) { r.speakerNamesInSRT = it; save() }
                 }
             }
-            Footer("Pendant l'interview, touche le nom de la personne qui parle. Chaque phrase prend le nom actif au moment où elle commence.")
+            Footer("Un intervieweur et jusqu'à ${Recorder.MAX_GUESTS} invités. Pendant l'interview, touche le nom de la personne qui parle. Chaque phrase prend le nom actif au moment où elle commence.")
 
             SectionTitle("Langues de transcription")
             Card {
@@ -137,6 +149,12 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun StepButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) =
+    Icon(icon, label, tint = if (enabled) Palette.coral else Palette.inkSoft.copy(alpha = 0.4f),
+         modifier = Modifier.clip(CircleShape).background(Palette.background)
+             .clickable(enabled = enabled, onClick = onClick).padding(8.dp))
 
 @Composable
 private fun Divider() = HorizontalDivider(color = Palette.background)

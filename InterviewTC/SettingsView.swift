@@ -56,20 +56,25 @@ struct SettingsView: View {
                 Section {
                     Toggle("Distinguer les locuteurs", isOn: $model.speakersEnabled)
                     if model.speakersEnabled {
+                        Stepper("Invités : \(model.guestCount)", value: $model.guestCount,
+                                in: 1...RecorderModel.maxGuests)
                         ForEach(model.speakerNames.indices, id: \.self) { i in
-                            TextField("Locuteur \(i + 1)", text: $model.speakerNames[i])
+                            LabeledContent(i == 0 ? "Intervieweur" : "Invité \(i)") {
+                                TextField(i == 0 ? "Intervieweur" : "Invité \(i)", text: $model.speakerNames[i])
+                                    .multilineTextAlignment(.trailing)
+                            }
                         }
                         Toggle("Noms dans les sous-titres SRT", isOn: $model.speakerNamesInSRT)
                     }
                 } header: {
                     Text("Locuteurs")
                 } footer: {
-                    Text("Pendant l'interview, touche le nom de la personne qui parle. Chaque phrase prend le nom actif au moment où elle commence.")
+                    Text("Un intervieweur et jusqu'à \(RecorderModel.maxGuests) invités. Pendant l'interview, touche le nom de la personne qui parle (ou tape 1 à \(RecorderModel.maxGuests + 1) sur un clavier). Chaque phrase prend le nom actif au moment où elle commence.")
                 }
             }
             .papoteList()
             .navigationTitle("Réglages")
-            .navigationBarTitleDisplayMode(.inline)
+            .papoteNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }
@@ -123,9 +128,15 @@ struct SettingsView: View {
         } header: {
             Label(service.rawValue, systemImage: service.icon)
         } footer: {
+            #if os(macOS)
+            Text(service == .iCloud
+                 ? "Choisis ou crée un dossier dans iCloud Drive, par exemple « Papote ». Tes fichiers y seront aussi visibles depuis l'iPhone."
+                 : "Choisis ou crée un dossier dans Google Drive (barre latérale du Finder, rubrique Emplacements). Il faut l'app Google Drive pour ordinateur.")
+            #else
             Text(service == .iCloud
                  ? "Choisis ou crée un dossier dans iCloud Drive, par exemple « Papote ». Tes fichiers y seront aussi visibles depuis le Mac."
                  : "Dans le sélecteur, touche « Parcourir » puis « Drive », et choisis ou crée un dossier. Si Drive n'apparaît pas : ouvre l'app Google Drive, connecte-toi, puis dans Fichiers > Parcourir > … > Modifier, active Drive.")
+            #endif
         }
         .listRowBackground(Theme.surface)
     }
@@ -135,15 +146,21 @@ struct SettingsView: View {
         switch service {
         case .iCloud:
             if !Backup.iCloudAccountAvailable {
-                Label("Aucun compte iCloud sur cet iPhone. Connecte-toi dans Réglages > ton nom.",
+                Label("Aucun compte iCloud sur cet appareil. Connecte-toi dans les Réglages, rubrique à ton nom.",
                       systemImage: "exclamationmark.triangle")
                     .font(.footnote).foregroundStyle(Theme.rec)
             }
         case .google:
-            if let app = URL(string: "googledrive://"), !UIApplication.shared.canOpenURL(app) {
+            if !Backup.googleDriveInstalled {
+                #if os(macOS)
+                Link(destination: URL(string: "https://www.google.com/drive/download/")!) {
+                    Label("Installer Google Drive pour ordinateur", systemImage: "arrow.down.app")
+                }
+                #else
                 Link(destination: URL(string: "https://apps.apple.com/app/google-drive/id507874739")!) {
                     Label("Installer l'app Google Drive", systemImage: "arrow.down.app")
                 }
+                #endif
             }
         }
     }

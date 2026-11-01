@@ -8,6 +8,10 @@ struct InterviewTCApp: App {
                 .tint(Theme.coral)
                 .fontDesign(.rounded)
         }
+        #if os(macOS)
+        .defaultSize(width: 460, height: 820)
+        .windowResizability(.contentMinSize)
+        #endif
     }
 }
 
@@ -27,8 +31,7 @@ struct ContentView: View {
                 controls
             }
             .background(Theme.background.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Theme.background, for: .navigationBar)
+            .papoteNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 6) {
@@ -36,11 +39,11 @@ struct ContentView: View {
                         Text("Papote").font(.headline.weight(.heavy)).foregroundStyle(Theme.ink)
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .papoteLeading) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                         .disabled(model.phase != .idle)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .papoteTrailing) {
                     NavigationLink { SessionsView() } label: { Image(systemName: "list.bullet") }
                         .disabled(model.phase != .idle)
                 }
@@ -208,7 +211,9 @@ struct ContentView: View {
     private var controls: some View {
         VStack(spacing: 14) {
             if model.speakersEnabled, model.phase != .finishing {
-                HStack(spacing: 10) {
+                // Une ligne jusqu'à 3 personnes, puis une grille de 3 colonnes.
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                         count: min(model.speakerNames.count, 3)), spacing: 10) {
                     ForEach(model.speakerNames.indices, id: \.self) { i in
                         let active = model.currentSpeaker == i
                         Button {
@@ -222,6 +227,8 @@ struct ContentView: View {
                                 .background(active ? Theme.coral : Theme.surface, in: Capsule())
                                 .foregroundStyle(active ? Theme.cream : Theme.ink)
                         }
+                        .buttonStyle(.plain)
+                        .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: [])
                     }
                 }
             }

@@ -1,5 +1,7 @@
 import Foundation
+#if os(iOS)
 import UIKit
+#endif
 
 /// Dossier de sauvegarde choisi dans l'app Fichiers (iCloud Drive, Google Drive…).
 /// On garde un signet pour y réécrire sans redemander l'accès.
@@ -43,8 +45,13 @@ enum BackupError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        #if os(macOS)
+        case .notICloud: "Ce dossier n'est pas dans iCloud Drive. Dans le sélecteur, choisis iCloud Drive dans la barre latérale."
+        case .notGoogle: "Ce dossier est dans iCloud Drive. Dans le sélecteur, choisis Google Drive dans la barre latérale."
+        #else
         case .notICloud: "Ce dossier n'est pas dans iCloud Drive. Dans le sélecteur, touche « Parcourir » puis « iCloud Drive »."
         case .notGoogle: "Ce dossier est dans iCloud Drive. Dans le sélecteur, touche « Parcourir » puis « Drive »."
+        #endif
         }
     }
 }
@@ -94,6 +101,18 @@ enum Backup {
     /// Compte iCloud actif sur l'iPhone (iCloud Drive peut quand même être désactivé).
     static var iCloudAccountAvailable: Bool { FileManager.default.ubiquityIdentityToken != nil }
 
+    /// L'app Google Drive (iPhone) ou Google Drive pour ordinateur (Mac) est installée.
+    @MainActor static var googleDriveInstalled: Bool {
+        #if os(macOS)
+        let cloud = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/CloudStorage")
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: cloud.path)) ?? []
+        return items.contains { $0.hasPrefix("GoogleDrive") }
+        #else
+        guard let app = URL(string: "googledrive://") else { return false }
+        return UIApplication.shared.canOpenURL(app)
+        #endif
+    }
+
     static func projectFolderName(_ session: InterviewSession) -> String {
         session.project ?? "Sans projet"
     }
@@ -105,10 +124,11 @@ enum Backup {
             do {
                 var stale = false
                 let root = try URL(resolvingBookmarkData: dest.bookmark, bookmarkDataIsStale: &stale)
-                guard root.startAccessingSecurityScopedResource() else {
-                    throw CocoaError(.fileReadNoPermission)
-                }
-                defer { root.stopAccessingSecurityScopedResource() }
+                let access = root.startAccessingSecurityScopedResource()
+                #if os(iOS)
+                guard access else { throw CocoaError(.fileReadNoPermission) }
+                #endif
+                defer { if access { root.stopAccessingSecurityScopedResource() } }
                 if stale, let fresh = try? root.bookmarkData() {
                     dest.bookmark = fresh
                     destinations = destinations.map { $0.id == dest.id ? dest : $0 }
@@ -148,11 +168,12 @@ enum Backup {
     /// iOS accorde un délai si l'app passe en arrière-plan pendant la copie.
     static func runInBackground(_ session: InterviewSession,
                                 onTextsDone: @MainActor @Sendable (BackupReport) -> Void = { _ in }) async -> BackupReport {
-        let task = await UIApplication.shared.beginBackgroundTask(withName: "Papote backup") {}
-        let texts = await Task.detached(priority: .userInitiated) { run(session, files: session.textURLs) }.value
-        await onTextsDone(texts)
-        let audio = await Task.detached(priority: .utility) { run(session, files: [session.audioURL]) }.value
-        await UIApplication.shared.endBackgroundTask(task)
+        let (texts, audio) = await Platform.backgroundTask("Papote backup") {
+            let texts = await Task.detached(priority: .userInitiated) { run(session, files: session.textURLs) }.value
+            await onTextsDone(texts)
+            let audio = await Task.detached(priority: .utility) { run(session, files: [session.audioURL]) }.value
+            return (texts, audio)
+        }
 
         // Une destination n'est réussie que si textes et audio y sont arrivés.
         var report = BackupReport()

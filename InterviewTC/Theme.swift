@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Couleurs de l'icône Papote, déclinées en clair et en sombre.
 enum Theme {
@@ -22,18 +21,14 @@ enum Theme {
     static let bubbleAlt = dynamic(light: 0xFDE3B0, dark: 0x4A3020)
 
     private static func dynamic(light: UInt32, dark: UInt32) -> Color {
-        Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
+        Platform.color(light: light, dark: dark)
     }
 }
 
 extension Color {
-    init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
-}
-
-extension UIColor {
-    convenience init(hex: UInt32) {
-        self.init(red: CGFloat(hex >> 16 & 255) / 255, green: CGFloat(hex >> 8 & 255) / 255,
-                  blue: CGFloat(hex & 255) / 255, alpha: 1)
+    init(hex: UInt32) {
+        self.init(.sRGB, red: Double(hex >> 16 & 255) / 255, green: Double(hex >> 8 & 255) / 255,
+                  blue: Double(hex & 255) / 255)
     }
 }
 
@@ -59,7 +54,7 @@ struct PapoteListStyle: ViewModifier {
         content
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .toolbarBackground(Theme.background, for: .navigationBar)
+            .papoteNavigationBar()
     }
 }
 

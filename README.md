@@ -1,12 +1,14 @@
 # Papote
 
-App d'interview pour **iPhone et Android**.
+App d'interview pour **iPhone, Mac et Android**.
 
 - [Installer sur Android](#android) : un fichier à télécharger, sans ordinateur.
 - [Installer sur iPhone](#iphone) : avec un Mac et Xcode.
+- [Installer sur Mac](#mac) : avec Xcode, même projet que l'iPhone.
 
-Papote enregistre une interview sur ton téléphone avec le timecode horaire local
-et la transcrit en direct. Elle produit :
+Papote enregistre une interview avec le timecode horaire local et la
+transcrit en direct. Tu indiques qui parle d'une touche : un intervieweur et
+jusqu'à 5 invités, dont les noms apparaissent dans les sous-titres. Elle produit :
 
 - un WAV BWF qui porte le timecode, lisible par DaVinci Resolve ;
 - des sous-titres SRT ;
@@ -94,7 +96,7 @@ compilable avec Android Studio.
   - Pour importer les marqueurs : clic droit sur la timeline > Timelines >
     Import > Timeline Markers from EDL.
 
-### Fichiers (iPhone)
+### Fichiers (iPhone et Mac)
 
 | Fichier | Rôle |
 |---|---|
@@ -106,6 +108,30 @@ compilable avec Android Studio.
 | `SessionsView.swift` | liste des interviews et correction du texte |
 | `SettingsView.swift`, `Backup.swift` | réglages, sauvegarde iCloud et Google Drive |
 | `Theme.swift` | couleurs et style |
+| `Platform.swift` | ce qui diffère entre iPhone et Mac (entrées audio du Mac, veille) |
+
+## Mac
+
+La version Mac est la même app que celle de l'iPhone, dans le même projet
+Xcode. Il faut **macOS 26 ou plus récent** et **Xcode 26 ou plus récent**.
+
+1. Récupère le projet (« Code » > « Download ZIP ») et ouvre
+   `InterviewTC.xcodeproj`.
+2. Dans **Signing & Capabilities**, choisis ta Team (Personal Team) ou,
+   pour le Mac seulement, « Sign to Run Locally ».
+3. En haut de la fenêtre, choisis **My Mac** comme destination, puis ▶︎.
+4. Pour garder l'app : Product > Show Build Folder in Finder, puis glisse
+   `Products/Debug/Papote.app` dans ton dossier Applications.
+
+Sur Mac :
+
+- les interviews sont rangées dans `Documents/Papote/`, un dossier par projet ;
+- l'entrée audio (micro du Mac, interface USB, micro Bluetooth) se choisit
+  dans les réglages ;
+- les touches **1** à **6** désignent la personne qui parle (1 =
+  l'intervieweur) ;
+- le Mac ne se met pas en veille pendant un enregistrement ;
+- la sauvegarde Google Drive passe par l'app Google Drive pour ordinateur.
 
 ## Licence
 

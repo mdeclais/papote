@@ -154,7 +154,7 @@ struct SessionDetailView: View {
         }
         .papoteList()
         .navigationTitle(session.id)
-        .navigationBarTitleDisplayMode(.inline)
+        .papoteNavigationBar()
         .sheet(item: $editingSegment) { seg in
             SegmentEditor(segment: seg, speakers: session.speakers, tc: session.tc(seg.start)) { result in
                 if let i = session.segments.firstIndex(where: { $0.id == seg.id }) {
@@ -239,7 +239,7 @@ struct SegmentEditor: View {
             }
             .papoteList()
             .navigationTitle("Corriger")
-            .navigationBarTitleDisplayMode(.inline)
+            .papoteNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -279,7 +279,7 @@ struct MarkerEditor: View {
             }
             .papoteList()
             .navigationTitle("Marqueur")
-            .navigationBarTitleDisplayMode(.inline)
+            .papoteNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

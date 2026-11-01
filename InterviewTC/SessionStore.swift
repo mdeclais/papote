@@ -98,12 +98,20 @@ struct InterviewSession: Codable, Identifiable, Hashable {
 }
 
 /// Documents/<projet>/<interview>/ — ou Documents/<interview>/ sans projet.
-/// Tout est visible dans l'app Fichiers.
+/// Tout est visible dans l'app Fichiers. Sur Mac : ~/Documents/Papote/.
 enum SessionStore {
     static let speakerNamesInSRTKey = "speakerNamesInSRT"
 
+    static var root: URL {
+        #if os(macOS)
+        URL.documentsDirectory.appending(path: "Papote", directoryHint: .isDirectory)
+        #else
+        URL.documentsDirectory
+        #endif
+    }
+
     static func folder(for id: String, project: String?) -> URL {
-        var url = URL.documentsDirectory
+        var url = root
         if let project, !project.isEmpty { url.append(path: project, directoryHint: .isDirectory) }
         return url.appending(path: id, directoryHint: .isDirectory)
     }
@@ -113,7 +121,7 @@ enum SessionStore {
     // MARK: Projets
 
     static func projects() -> [String] {
-        subfolders(of: URL.documentsDirectory)
+        subfolders(of: root)
             .filter { !FileManager.default.fileExists(atPath: $0.appending(path: "session.json").path) }
             .map(\.lastPathComponent)
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
@@ -128,7 +136,7 @@ enum SessionStore {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty, !clean.hasPrefix(".") else { throw CocoaError(.fileWriteInvalidFileName) }
         try FileManager.default.createDirectory(
-            at: URL.documentsDirectory.appending(path: clean, directoryHint: .isDirectory),
+            at: root.appending(path: clean, directoryHint: .isDirectory),
             withIntermediateDirectories: true)
         return clean
     }
@@ -168,7 +176,7 @@ enum SessionStore {
     static func loadAll() -> [InterviewSession] {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let top = subfolders(of: URL.documentsDirectory)
+        let top = subfolders(of: root)
         let folders = top + top.flatMap(subfolders(of:))
         return folders
             .compactMap { try? Data(contentsOf: $0.appending(path: "session.json")) }
