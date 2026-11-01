@@ -20,8 +20,8 @@ jobs:
       run:
         working-directory: windows
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -37,12 +37,12 @@ jobs:
           $s.Dispose()
 
       - name: Tests (dont la transcription Vosk avec la DLL Windows)
-        run: ./gradlew.bat test "-Dpapote.speech=${{ runner.temp }}\speech.wav" -Dpapote.speechLang=en-US
+        run: ./gradlew.bat test "-Dpapote.speech=${{ runner.temp }}\speech.wav" "-Dpapote.speechLang=en-US"
 
       - name: Installeur
         run: ./gradlew.bat packageMsi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Papote-windows
           path: windows/build/compose/binaries/main/msi/*.msi

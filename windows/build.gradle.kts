@@ -11,7 +11,7 @@ kotlin { jvmToolchain(17) }
 dependencies {
     implementation("io.github.mdeclais.papote:core")
     implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
+    implementation("org.jetbrains.compose.material3:material3:1.9.0")
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
     implementation("org.json:json:20250517")
