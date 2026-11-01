@@ -1,6 +1,11 @@
-# Papote — installer l'app sur ton iPhone
+# Papote
 
-Papote enregistre une interview sur iPhone avec le timecode horaire local
+App d'interview pour **iPhone et Android**.
+
+- [Installer sur Android](#android) : un fichier à télécharger, sans ordinateur.
+- [Installer sur iPhone](#iphone) : avec un Mac et Xcode.
+
+Papote enregistre une interview sur ton téléphone avec le timecode horaire local
 et la transcrit en direct. Elle produit :
 
 - un WAV BWF qui porte le timecode, lisible par DaVinci Resolve ;
@@ -8,13 +13,40 @@ et la transcrit en direct. Elle produit :
 - des marqueurs EDL ;
 - un texte horodaté.
 
-## Ce qu'il te faut
+## Android
+
+1. Sur le téléphone, ouvre la page
+   [Releases](https://github.com/mdeclais/papote/releases/latest) et
+   touche **Papote-android.apk** pour le télécharger.
+2. Ouvre le fichier téléchargé. La première fois, Android demande
+   d'autoriser ton navigateur à « installer des applis inconnues » :
+   accepte, puis reviens en arrière et touche **Installer**.
+3. Ouvre Papote. Touche la pastille de langue puis **Français** pour
+   télécharger la transcription (41 Mo, une seule fois). Elle fonctionne
+   ensuite sans Internet.
+
+Android 8 ou plus récent. La transcription utilise
+[Vosk](https://alphacephei.com/vosk/), directement sur le téléphone. Elle est
+un peu moins précise que celle de l'iPhone et ne met pas de ponctuation. Les
+fichiers produits sont les mêmes que sur iPhone : WAV BWF au timecode
+horaire, SRT, EDL et texte.
+
+Pour récupérer les fichiers, touche **Partager** à la fin d'une interview :
+Drive, Gmail, WeTransfer… Tu peux aussi choisir un dossier de sauvegarde
+automatique dans les réglages.
+
+Le code Android est dans le dossier `android/` : Kotlin et Jetpack Compose,
+compilable avec Android Studio.
+
+## iPhone
+
+### Ce qu'il te faut
 
 - Un Mac avec **Xcode 26 ou plus récent**, gratuit sur le Mac App Store.
 - Un iPhone sous **iOS 26 ou plus récent** et son câble.
 - Un **identifiant Apple**. Un compte gratuit suffit.
 
-## Installation (environ 10 minutes)
+### Installation (environ 10 minutes)
 
 1. **Récupère le projet.** Sur cette page GitHub, clique sur « Code » puis
    « Download ZIP ». Dézippe le dossier, puis double-clique sur
@@ -40,7 +72,7 @@ et la transcrit en direct. Elle produit :
    Général > VPN et gestion de l'appareil, touche ton identifiant Apple,
    puis « Faire confiance ».
 
-## À savoir
+### À savoir
 
 - **Avec un compte gratuit, l'app cesse de s'ouvrir au bout de 7 jours.**
   Tes enregistrements restent sur l'iPhone. Pour la relancer, rebranche
@@ -62,7 +94,7 @@ et la transcrit en direct. Elle produit :
   - Pour importer les marqueurs : clic droit sur la timeline > Timelines >
     Import > Timeline Markers from EDL.
 
-## Fichiers
+### Fichiers (iPhone)
 
 | Fichier | Rôle |
 |---|---|

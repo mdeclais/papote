@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Papote" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/papote_background</item>
+    </style>
+    <color name="papote_background">#FFF4DE</color>
+    <color name="papote_yellow">#FAC775</color>
+</resources>
